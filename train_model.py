@@ -3,7 +3,7 @@ from xgboost import XGBRegressor
 import joblib
 
 # 1. Load Data
-df = pd.read_csv('PJME_hourly.csv', parse_dates=['Datetime'], index_col='Datetime')
+df = pd.read_csv('data/PJME_hourly.csv', parse_dates=['Datetime'], index_col='Datetime')
 
 # 2. Feature Engineering
 df['hour'] = df.index.hour
@@ -24,5 +24,4 @@ model.fit(X, y)
 
 # 4. Save
 joblib.dump(model, 'energy_weather_model.pkl')
-
 print("Model saved as energy_weather_model.pkl")
