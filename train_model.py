@@ -7,19 +7,20 @@ us_holidays = holidays.US()
 
 def train_new_model():
     # 1. Load Data
-    df = pd.read_csv('data/PJME_hourly.csv', parse_dates=['Datetime'], index_col='Datetime')
+    df = pd.read_csv('data/PJME_hourly.csv', parse_dates=['Datetime'])
 
     # 2. Feature Engineering
-    df['hour'] = df.index.hour
-    df['dayofweek'] = df.index.dayofweek
-    df['month'] = df.index.month
+    df['hour'] = df['Datetime'].dt.hour
+    df['dayofweek'] = df['Datetime'].dt.dayofweek
+    df['month'] = df['Datetime'].dt.month
     # For simplicity, we assume you have merged weather data here
     # If you haven't, the model will just use time features
     df['temp'] = 20.0  # Placeholder: Replace with your actual weather column
     df['humidity'] = 50.0 # Placeholder: Replace with your actual humidity column
     df['is_weekend'] = df['dayofweek'].apply(lambda x: 1 if x >= 5 else 0)
-    df['is_holiday'] = df['Datetime'].apply(lambda x: 1 if x in us_holidays else 0)
+    # Convert the holiday list keys to a set of dates for faster and more reliable matching
 
+    df['is_holiday'] = df['Datetime'].dt.date.apply(lambda x: 1 if x in us_holidays else 0)
     features = ['hour', 'dayofweek', 'month', 'temp', 'humidity', 'is_weekend', 'is_holiday']
     X = df[features]
     y = df['PJME_MW']
