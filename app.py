@@ -1,10 +1,12 @@
+import os
+
 import streamlit as st
 import pandas as pd
 import requests
 import joblib
 from datetime import datetime
 
-# Load the model
+# 1. LOAD MODEL
 @st.cache_resource
 def load_model():
     return joblib.load('energy_weather_model.pkl')
@@ -13,7 +15,7 @@ model = load_model()
 
 st.title("⚡ Energy Demand Predictor")
 
-
+# 2. LIVE PREDICTION SECTION
 CITIES = {
     "Philadelphia": "Philadelphia,US",
     "New York": "New York,US",
@@ -147,4 +149,34 @@ if st.button("Generate 5-Day Forecast"):
         st.subheader("📅 5-Day Summary Table")
         st.dataframe(summary_df.style.format("{:.0f}")) # Format to remove decimals
 
- 
+st.divider() # A visual line to separate current from past
+
+# 3. PERFORMANCE & HISTORY SECTION
+st.subheader("📊 Model Performance & History")
+
+if os.path.exists('prediction_history.csv'):
+    # Load the CSV built by your GitHub Action
+    df_history = pd.read_csv('prediction_history.csv')
+    df_history['timestamp'] = pd.to_datetime(df_history['timestamp'])
+
+    # --- THE NEW ACCURACY METRICS ---
+    if len(df_history) > 1:
+        # Calculate how far off the prediction was from the actual temp
+        # This is a proxy for how well the model is tracking reality
+        df_history['error'] = (df_history['temp'] - df_history['prediction']).abs()
+        mae = df_history['error'].mean()
+        
+        # Simple accuracy formula: 100% minus the % error
+        accuracy = 100 - (mae / df_history['temp'].mean() * 100)
+
+        col1, col2 = st.columns(2)
+        col1.metric("Model Reliability", f"{accuracy:.1f}%")
+        col2.metric("Avg Error (MAE)", f"{mae:.2f}°C")
+
+    # --- THE HISTORY CHART ---
+    st.line_chart(df_history.set_index('timestamp')[['prediction', 'temp']])
+    
+    with st.expander("View Raw History Logs"):
+        st.dataframe(df_history.tail(10))
+else:
+    st.info("No history found. The GitHub Action will create this file on its next run.")
