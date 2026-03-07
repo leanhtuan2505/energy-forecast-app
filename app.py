@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import joblib
+import holidays
 from datetime import datetime
 from database import load_history
 
@@ -13,6 +14,9 @@ def load_model():
     return joblib.load('energy_weather_model.pkl')
 
 model = load_model()
+
+us_holidays = holidays.US()
+now = datetime.now()
 
 st.title("⚡ Energy Demand Predictor")
 
@@ -71,14 +75,17 @@ if st.button("Get Forecast"):
     # Check if we actually got data back
     if temp is not None:
         now = datetime.now()
-        
+        is_weekend = 1 if now.weekday() >= 5 else 0
+        is_holiday = 1 if now in us_holidays else 0
         # 1. Create the DataFrame
         input_data = pd.DataFrame({
             'hour': [now.hour],
             'dayofweek': [now.weekday()],
             'month': [now.month],
             'temp': [temp],
-            'humidity': [humidity]
+            'humidity': [humidity],
+            'is_weekend': [is_weekend],
+            'is_holiday': [is_holiday]
         })
         
         # 2. THE FIX: Force everything to be a number (float)

@@ -1,6 +1,9 @@
 import pandas as pd
 from xgboost import XGBRegressor
 import joblib
+import holidays
+
+us_holidays = holidays.US()
 
 def train_new_model():
     # 1. Load Data
@@ -14,8 +17,10 @@ def train_new_model():
     # If you haven't, the model will just use time features
     df['temp'] = 20.0  # Placeholder: Replace with your actual weather column
     df['humidity'] = 50.0 # Placeholder: Replace with your actual humidity column
+    df['is_weekend'] = df['dayofweek'].apply(lambda x: 1 if x >= 5 else 0)
+    df['is_holiday'] = df['Datetime'].apply(lambda x: 1 if x in us_holidays else 0)
 
-    features = ['hour', 'dayofweek', 'month', 'temp', 'humidity']
+    features = ['hour', 'dayofweek', 'month', 'temp', 'humidity', 'is_weekend', 'is_holiday']
     X = df[features]
     y = df['PJME_MW']
 
