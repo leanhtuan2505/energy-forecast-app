@@ -23,6 +23,7 @@ def init_db():
 
 def save_prediction(city, temp, humidity, prediction, is_simulated=0):
     conn = sqlite3.connect(DB_NAME)
+    init_db()
     df = pd.DataFrame([{
         'city': city,
         'temp': temp,
@@ -36,6 +37,7 @@ def save_prediction(city, temp, humidity, prediction, is_simulated=0):
 
 def load_history():
     conn = sqlite3.connect(DB_NAME)
+    init_db()
     df = pd.read_sql('SELECT * FROM predictions ORDER BY timestamp DESC LIMIT 100', conn)
     conn.close()
     return df
