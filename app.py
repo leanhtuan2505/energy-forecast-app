@@ -130,6 +130,21 @@ if st.button("Generate 5-Day Forecast"):
         st.line_chart(df_weather.set_index('datetime')[['prediction_mw', 'threshold']])
 
 
-        ###
+        ### ADD SUMMARY TABLE
+        # 1. Group the 5-day forecast by Date
+        df_weather['date'] = df_weather['datetime'].dt.date
+
+        # 2. Calculate the Daily Statistics
+        summary_df = df_weather.groupby('date').agg({
+            'prediction_mw': ['mean', 'min', 'max'],
+            'temp': 'mean'
+        })
+
+        # 3. Clean up the Column Names (Flatten the Multi-Index)
+        summary_df.columns = ['Avg Demand (MW)', 'Min Demand (MW)', 'Max Demand (MW)', 'Avg Temp (°C)']
+
+        # 4. Display the Summary Table
+        st.subheader("📅 5-Day Summary Table")
+        st.dataframe(summary_df.style.format("{:.0f}")) # Format to remove decimals
 
  
