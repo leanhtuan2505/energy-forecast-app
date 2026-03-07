@@ -14,6 +14,33 @@ model = load_model()
 st.title("⚡ Energy Demand Predictor")
 
 
+CITIES = {
+    "Philadelphia": "Philadelphia,US",
+    "New York": "New York,US",
+    "Chicago": "Chicago,US",
+    "Washington DC": "Washington,US"
+}
+
+def get_7day_forecast(city_query):
+    API_KEY = st.secrets["OPENWEATHER_API_KEY"]
+    # Using the 5-day forecast API (free tier)
+    url = f"http://api.openweathermap.org/data/2.5/forecast?q={city_query}&appid={API_KEY}&units=metric"
+    
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        forecast_list = []
+        for item in data['list']:
+            forecast_list.append({
+                "datetime": datetime.fromtimestamp(item['dt']),
+                "temp": item['main']['temp'],
+                "humidity": item['main']['humidity']
+            })
+        return pd.DataFrame(forecast_list)
+    else:
+        st.error("Failed to fetch forecast.")
+        return None
+    
 def get_live_weather(city="Philadelphia"):
     # Ensure your API key is active (can take 2 hours for new keys)
     API_KEY = st.secrets["OPENWEATHER_API_KEY"]
@@ -57,3 +84,28 @@ if st.button("Get Forecast"):
         # 3. Predict
         prediction = model.predict(input_data)[0]
         st.metric("Predicted Load", f"{int(prediction)} MW")
+
+
+# 1. City Selection
+selected_city = st.selectbox("Select a City:", list(CITIES.keys()))
+
+if st.button("Generate 5-Day Forecast"):
+    df_weather = get_7day_forecast(CITIES[selected_city])
+    
+    if df_weather is not None:
+        # 2. Prepare features for the model
+        df_weather['hour'] = df_weather['datetime'].dt.hour
+        df_weather['dayofweek'] = df_weather['datetime'].dt.dayofweek
+        df_weather['month'] = df_weather['datetime'].dt.month
+        
+        # 3. Predict for all rows at once!
+        # Features must match: ['hour', 'dayofweek', 'month', 'temp', 'humidity']
+        X_live = df_weather[['hour', 'dayofweek', 'month', 'temp', 'humidity']].astype(float)
+        df_weather['prediction_mw'] = model.predict(X_live)
+        
+        # 4. Display a Line Chart
+        st.subheader(f"Demand Forecast for {selected_city}")
+        st.line_chart(df_weather.set_index('datetime')['prediction_mw'])
+        
+        # 5. Show Raw Data
+        st.write(df_weather[['datetime', 'temp', 'prediction_mw']].head(10))
