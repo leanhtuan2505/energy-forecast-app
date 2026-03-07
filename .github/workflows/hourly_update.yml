@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 * * * *' # Runs at the start of every hour
   workflow_dispatch: # Allows you to run it manually for testing
+  
+permissions:
+  contents: write  # This is the "Key" that lets the bot push the CSV
 
 jobs:
   build:
