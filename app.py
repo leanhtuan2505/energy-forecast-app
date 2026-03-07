@@ -103,9 +103,33 @@ if st.button("Generate 5-Day Forecast"):
         X_live = df_weather[['hour', 'dayofweek', 'month', 'temp', 'humidity']].astype(float)
         df_weather['prediction_mw'] = model.predict(X_live)
         
-        # 4. Display a Line Chart
-        st.subheader(f"Demand Forecast for {selected_city}")
-        st.line_chart(df_weather.set_index('datetime')['prediction_mw'])
-        
-        # 5. Show Raw Data
-        st.write(df_weather[['datetime', 'temp', 'prediction_mw']].head(10))
+        ###
+        # 1. Calculate the Baseline (The "Normal" Level)
+        avg_demand = df_weather['prediction_mw'].mean()
+        std_demand = df_weather['prediction_mw'].std()
+
+        # Define the "Alert Level" (e.g., Mean + 1.5 Standard Deviations)
+        alert_threshold = avg_demand + (1.5 * std_demand)
+
+        # 2. Find the Peaks
+        peaks = df_weather[df_weather['prediction_mw'] > alert_threshold]
+
+        # 3. UI Display
+        if not peaks.empty:
+            st.error(f"🚨 ALERT: {len(peaks)} high-demand anomalies detected in the next 5 days!")
+            
+            # Show the most extreme peak
+            max_peak = peaks.loc[peaks['prediction_mw'].idxmax()]
+            st.warning(f"Critical Peak Expected: **{int(max_peak['prediction_mw'])} MW** on {max_peak['datetime'].strftime('%A at %H:%M')}")
+        else:
+            st.success("✅ Grid Stability: No major demand spikes forecasted.")
+
+        # 4. Visualize the Threshold on the Chart
+        # We create a horizontal line for the threshold
+        df_weather['threshold'] = alert_threshold
+        st.line_chart(df_weather.set_index('datetime')[['prediction_mw', 'threshold']])
+
+
+        ###
+
+ 
