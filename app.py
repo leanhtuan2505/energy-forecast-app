@@ -5,6 +5,7 @@ import pandas as pd
 import requests
 import joblib
 from datetime import datetime
+from database import load_history
 
 # 1. LOAD MODEL
 @st.cache_resource
@@ -152,31 +153,10 @@ if st.button("Generate 5-Day Forecast"):
 st.divider() # A visual line to separate current from past
 
 # 3. PERFORMANCE & HISTORY SECTION
-st.subheader("📊 Model Performance & History")
+st.subheader("📊 Database History")
+df_history = load_history()
 
-if os.path.exists('prediction_history.csv'):
-    # Load the CSV built by your GitHub Action
-    df_history = pd.read_csv('prediction_history.csv')
-    df_history['timestamp'] = pd.to_datetime(df_history['timestamp'])
-
-    # --- THE NEW ACCURACY METRICS ---
-    if len(df_history) > 1:
-        # Calculate how far off the prediction was from the actual temp
-        # This is a proxy for how well the model is tracking reality
-        df_history['error'] = (df_history['temp'] - df_history['prediction']).abs()
-        mae = df_history['error'].mean()
-        
-        # Simple accuracy formula: 100% minus the % error
-        accuracy = 100 - (mae / df_history['temp'].mean() * 100)
-
-        col1, col2 = st.columns(2)
-        col1.metric("Model Reliability", f"{accuracy:.1f}%")
-        col2.metric("Avg Error (MAE)", f"{mae:.2f}°C")
-
-    # --- THE HISTORY CHART ---
+if not df_history.empty:
     st.line_chart(df_history.set_index('timestamp')[['prediction', 'temp']])
-    
-    with st.expander("View Raw History Logs"):
-        st.dataframe(df_history.tail(10))
 else:
-    st.info("No history found. The GitHub Action will create this file on its next run.")
+    st.info("The database is currently empty.")
