@@ -16,7 +16,7 @@ st.title("⚡ Energy Demand Predictor")
 
 def get_live_weather(city="Philadelphia"):
     # Ensure your API key is active (can take 2 hours for new keys)
-    API_KEY = "ccadce623dd6289d62bede76f03a15fb" 
+    API_KEY = st.secrets["OPENWEATHER_API_KEY"]
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
     
     try:
