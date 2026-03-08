@@ -3,6 +3,9 @@ from xgboost import XGBRegressor
 import joblib
 import holidays
 
+from config import config
+
+
 us_holidays = holidays.US()
 
 def train_new_model():
@@ -30,8 +33,8 @@ def train_new_model():
     model.fit(X, y)
 
     # 4. Save
-    joblib.dump(model, 'energy_weather_model.pkl')
-    print("Model saved as energy_weather_model.pkl")
+    joblib.dump(model, config.MODEL_PATH)
+    print(f"Model saved as {config.MODEL_PATH}")
 
 if __name__ == "__main__":
     train_new_model()

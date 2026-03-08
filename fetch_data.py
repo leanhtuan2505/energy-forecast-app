@@ -1,28 +1,21 @@
 import pandas as pd
-import requests
 import joblib
 from datetime import datetime
-import os
 import holidays
 from database import save_prediction
 from config import config
+from weather_api import get_live_weather  # Reuse existing API function
 
 # 1. Load Model
 model = joblib.load(config.MODEL_PATH)
 
 us_holidays = holidays.US()
-now = datetime.now()
 
 def get_data_and_save():
-    API_KEY = config.API_KEY # We use an Environment Variable
-    city = "Philadelphia,US"
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+    # Fetch weather using the reusable function
+    temp, humidity = get_live_weather("Philadelphia")
     
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        temp = data["main"]["temp"]
-        humidity = data["main"]["humidity"]
+    if temp is not None and humidity is not None:
         now = datetime.now()
         is_weekend = 1 if now.weekday() >= 5 else 0
         is_holiday = 1 if now in us_holidays else 0
@@ -42,6 +35,8 @@ def get_data_and_save():
         save_prediction(city="Philadelphia", timestamp=str(now), temp=temp, humidity=humidity, 
                 prediction=prediction, is_simulated=0)
         print("Data saved to SQLite database.")
+    else:
+        print("Failed to fetch weather data.")
 
 if __name__ == "__main__":
     get_data_and_save()
