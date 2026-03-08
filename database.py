@@ -20,7 +20,7 @@ def load_history() -> pd.DataFrame:
         conn.close()
         
         if not df.empty:
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
         
         return df
     except Exception as e:
