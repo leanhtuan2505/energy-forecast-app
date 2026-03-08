@@ -8,13 +8,13 @@ from database import save_prediction
 import config
 
 # 1. Load Model
-model = joblib.load('energy_weather_model.pkl')
+model = joblib.load(config.MODEL_PATH)
 
 us_holidays = holidays.US()
 now = datetime.now()
 
 def get_data_and_save():
-    API_KEY = os.getenv(config.API_KEY) # We use an Environment Variable
+    API_KEY = config.API_KEY # We use an Environment Variable
     city = "Philadelphia,US"
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
     
