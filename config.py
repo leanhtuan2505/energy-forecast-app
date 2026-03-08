@@ -12,7 +12,7 @@ class Config:
     @property
     def API_KEY(self):
         """Get OpenWeather API key from environment or Streamlit secrets."""
-        key = os.getenv("OPENWEATHER_API_KEY") or st.secrets.get("OPENWEATHER_API_KEY")
+        key = os.getenv("OPENWEATHER_API_KEY") # or st.secrets.get("OPENWEATHER_API_KEY")
         if not key:
             raise ValueError("OPENWEATHER_API_KEY not found in environment or secrets")
         return key
