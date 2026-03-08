@@ -1,7 +1,10 @@
 import sqlite3
 import pandas as pd
 from typing import Optional
-from config import config 
+from config import config
+import logging
+
+logger = logging.getLogger(__name__)
 
 def load_history() -> pd.DataFrame:
     """
@@ -21,7 +24,7 @@ def load_history() -> pd.DataFrame:
         
         return df
     except Exception as e:
-        print(f"Error loading history: {e}")
+        logger.error(f"Error loading history: {e}")
         return pd.DataFrame()
 
 def save_prediction(city:str, timestamp: str, prediction: float, temp: float, humidity: float, is_simulated=0):
@@ -68,4 +71,4 @@ def save_prediction(city:str, timestamp: str, prediction: float, temp: float, hu
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Error saving prediction: {e}")
+        logger.error(f"Error saving prediction: {e}")

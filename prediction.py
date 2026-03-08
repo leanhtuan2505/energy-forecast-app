@@ -4,6 +4,9 @@ import streamlit as st
 from datetime import datetime
 from typing import List, Tuple
 from config import config
+import logging
+
+logger = logging.getLogger(__name__)
 
 @st.cache_resource
 def load_model():
@@ -11,7 +14,10 @@ def load_model():
     try:
         return joblib.load(config.MODEL_PATH)
     except FileNotFoundError:
-        raise FileNotFoundError(f"Model file not found: {config.MODEL_PATH}")
+        logger.error(f"Model file not found: {config.MODEL_PATH}")
+    except Exception as e:
+        logger.error(f"Error loading model: {e}")
+        raise
 
 def prepare_prediction_features(datetime_obj: datetime, temp: float, humidity: float, 
                                include_holiday: bool = True) -> pd.DataFrame:
@@ -56,8 +62,12 @@ def predict_energy_demand(features_df: pd.DataFrame) -> List[float]:
     Returns:
         List of predictions
     """
-    model = load_model()
-    return model.predict(features_df).tolist()
+    try:
+        model = load_model()
+        return model.predict(features_df).tolist()
+    except Exception as e:
+        logger.error(f"Prediction failed: {e}")
+        raise
 
 def detect_anomalies(predictions: List[float], threshold_multiplier: float = None) -> Tuple[List[bool], float]:
     """

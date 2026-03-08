@@ -4,6 +4,9 @@ from datetime import datetime
 import holidays
 from database import save_prediction
 from config import config
+import logging
+
+logger = logging.getLogger(__name__)
 from weather_api import get_live_weather  # Reuse existing API function
 
 # 1. Load Model
@@ -34,9 +37,9 @@ def get_data_and_save():
            
         save_prediction(city="Philadelphia", timestamp=str(now), temp=temp, humidity=humidity, 
                 prediction=prediction, is_simulated=0)
-        print("Data saved to SQLite database.")
+        logger.info("Data saved to SQLite database.")
     else:
-        print("Failed to fetch weather data.")
+        logger.error("Failed to fetch weather data.")
 
 if __name__ == "__main__":
     get_data_and_save()

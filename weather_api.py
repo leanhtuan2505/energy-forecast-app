@@ -3,6 +3,11 @@ import pandas as pd
 from datetime import datetime
 from typing import Optional, Tuple
 from config import config
+import logging
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_live_weather(city: str = "Philadelphia") -> Tuple[Optional[float], Optional[float]]:
     """
@@ -22,10 +27,10 @@ def get_live_weather(city: str = "Philadelphia") -> Tuple[Optional[float], Optio
         data = response.json()
         return data["main"]["temp"], data["main"]["humidity"]
     except requests.exceptions.RequestException as e:
-        print(f"API request failed: {e}")
+        logger.error(f"API request failed for {city}: {e}")
         return None, None
     except KeyError as e:
-        print(f"Unexpected API response format: {e}")
+        logger.error(f"Unexpected API response format: {e}")
         return None, None
 
 def get_7day_forecast(city_query: str) -> Optional[pd.DataFrame]:
@@ -54,8 +59,8 @@ def get_7day_forecast(city_query: str) -> Optional[pd.DataFrame]:
             })
         return pd.DataFrame(forecast_list)
     except requests.exceptions.RequestException as e:
-        print(f"Forecast API request failed: {e}")
+        logger.error(f"Forecast API request failed: {e}")
         return None
     except (KeyError, ValueError) as e:
-        print(f"Error parsing forecast data: {e}")
+        logger.error(f"Error parsing forecast data: {e}")
         return None

@@ -9,6 +9,9 @@ from ui_components import (
     display_forecast_chart, display_summary_table, display_history_chart
 )
 from database import load_history
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Load model at startup
 from prediction import load_model
@@ -19,15 +22,20 @@ st.title("⚡ Energy Demand Predictor")
 # 1. LIVE PREDICTION SECTION
 if st.button("Get Forecast"):
     with st.spinner("Fetching current weather..."):
-        temp, humidity = get_live_weather()
-    
-    if temp is not None:
-        now = datetime.now()
-        features_df = prepare_prediction_features(now, temp, humidity)
-        prediction = predict_energy_demand(features_df)[0]
-        display_current_prediction(prediction)
-    else:
-        st.error("Failed to fetch current weather data.")
+        try:
+            temp, humidity = get_live_weather()
+        
+            if temp is not None:
+                now = datetime.now()
+                features_df = prepare_prediction_features(now, temp, humidity)
+                prediction = predict_energy_demand(features_df)[0]
+                display_current_prediction(prediction)
+            else:
+                st.error("Failed to fetch current weather data.")
+
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+            logger.error(f"UI error: {e}")
 
 # 2. 5-DAY FORECAST SECTION
 selected_city = st.selectbox("Select a City:", list(config.CITIES.keys()))
