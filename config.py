@@ -1,5 +1,5 @@
 import os
-#import streamlit as st
+import streamlit as st
 import logging
 
 logging.basicConfig(
@@ -12,9 +12,25 @@ class Config:
     @property
     def API_KEY(self):
         """Get OpenWeather API key from environment or Streamlit secrets."""
-        key = os.getenv("OPENWEATHER_API_KEY") # or st.secrets.get("OPENWEATHER_API_KEY")
+        key = os.getenv("OPENWEATHER_API_KEY")  or st.secrets.get("OPENWEATHER_API_KEY")
         if not key:
             raise ValueError("OPENWEATHER_API_KEY not found in environment or secrets")
+        return key
+    
+    @property
+    def SUPABASE_URL(self):
+        """Get Supabase URL from environment."""
+        url = os.getenv("SUPABASE_URL")  or st.secrets.get("SUPABASE_URL")
+        if not url:
+            raise ValueError("SUPABASE_URL not found in environment")
+        return url
+
+    @property
+    def SUPABASE_KEY(self):
+        """Get Supabase key from environment."""
+        key = os.getenv("SUPABASE_KEY")  or st.secrets.get("SUPABASE_KEY")
+        if not key:
+            raise ValueError("SUPABASE_KEY not found in environment")
         return key
     
     MODEL_PATH = "energy_weather_model.pkl"
@@ -24,6 +40,7 @@ class Config:
     UNITS = "metric"
     WEEKEND_START_DAY = 5  # Saturday
     DATA_BASE_PATH = "energy_data.db"
+
 
     CITIES = {
         "Philadelphia": "Philadelphia,US",

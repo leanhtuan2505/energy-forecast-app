@@ -1,5 +1,7 @@
 import streamlit as st
+import pandas as pd
 from datetime import datetime
+import time
 from config import config
 from weather_api import get_live_weather
 from prediction import prepare_prediction_features, predict_energy_demand
@@ -58,6 +60,35 @@ if st.button("Generate 5-Day Forecast"):
             
             # Display summary table
             display_summary_table(forecast_data["summary_df"])
+
+
+# --- LIVE MONITORING SECTION ---
+st.divider()
+st.header("📊 Real-Time Prediction History")
+
+# We wrap the table in a 'fragment' so it can refresh independently
+@st.fragment(run_every="60s")
+def show_live_table():
+    try:
+        # 1. Fetch data using your new Supabase function
+        df_history = load_history()
+        
+        if not df_history.empty:
+            # 2. Basic cleanup for the UI
+            df_display = df_history[['timestamp', 'temp', 'prediction', 'city']].copy()
+            df_display['timestamp'] = pd.to_datetime(df_display['timestamp']).dt.strftime('%H:%M:%S')
+            
+            # 3. Display the interactive table
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
+            st.caption(f"Last updated: {time.strftime('%H:%M:%S')} (Auto-refreshes every 1m)")
+        else:
+            st.info("No data found in Supabase yet. Waiting for first GitHub Action run...")
+            
+    except Exception as e:
+        st.error(f"Database Connection Error: {e}")
+
+# Call the fragment
+show_live_table()
 
 st.divider()
 

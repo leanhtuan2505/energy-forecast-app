@@ -1,74 +1,30 @@
-import sqlite3
 import pandas as pd
-from typing import Optional
+from supabase import create_client, Client
 from config import config
-import logging
 
-logger = logging.getLogger(__name__)
+# These should be stored in GitHub Secrets and Streamlit Secrets!
+url = config.SUPABASE_URL
+key = config.SUPABASE_KEY
+supabase: Client = create_client(url, key)
 
-def load_history() -> pd.DataFrame:
-    """
-    Load prediction history from database.
+def save_prediction(city, temp, humidity, prediction, is_weekend=0, is_holiday=0, is_simulated=0, timestamp=None):
+    data = {
+        "city": city,
+        "temp": temp,
+        "humidity": humidity,
+        "prediction": float(prediction), # Ensure it's not a numpy type
+        "is_weekend": is_weekend,
+        "is_holiday": is_holiday,
+        "is_simulated": is_simulated
+    }
     
-    Returns:
-        DataFrame with historical data
-    """
-    try:
-        conn = sqlite3.connect(config.DATA_BASE_PATH)
-        query = "SELECT * FROM predictions ORDER BY timestamp DESC"
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        
-        if not df.empty:
-            df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-        
-        return df
-    except Exception as e:
-        logger.error(f"Error loading history: {e}")
-        return pd.DataFrame()
+    # If a custom timestamp is provided, use it; otherwise Supabase uses 'now'
+    if timestamp:
+        data["timestamp"] = timestamp
 
-def save_prediction(city:str, timestamp: str, prediction: float, temp: float, humidity: float, is_simulated=0):
-    """
-    Save a prediction to the database.
-    
-    Args:
-        city: City name
-        timestamp: Prediction timestamp
-        prediction: Predicted value
-        temp: Temperature
-        humidity: Humidity
-        is_simulated: Flag indicating if the prediction is simulated
-    """
-    try:
-        conn = sqlite3.connect(config.DATA_BASE_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS predictions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                city TEXT,
-                temp REAL,
-                humidity REAL,
-                prediction REAL,
-                is_simulated INTEGER
-            )
-        ''')
-        
-        cursor.execute('''
-            INSERT OR REPLACE INTO predictions (timestamp, city, prediction, temp, humidity, is_simulated)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (timestamp, city, prediction, temp, humidity, int(is_simulated)))
-        df = pd.DataFrame([{
-            'city': city,
-            'temp': temp,
-            'humidity': humidity,
-            'prediction': prediction,
-            'is_simulated': int(is_simulated)
-        }])
-        # Append the dataframe to the SQL table
-        df.to_sql('predictions', conn, if_exists='append', index=False)
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        logger.error(f"Error saving prediction: {e}")
+    return supabase.table("predictions").insert(data).execute()
+
+def load_history():
+    # Fetch the last 100 rows from the cloud
+    response = supabase.table("predictions").select("*").order("timestamp", desc=True).limit(100).execute()
+    return pd.DataFrame(response.data)
