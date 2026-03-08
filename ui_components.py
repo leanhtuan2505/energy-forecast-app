@@ -27,7 +27,21 @@ def display_summary_table(summary_df: pd.DataFrame):
 
 def display_history_chart(df_history: pd.DataFrame):
     """Display historical predictions chart."""
-    if not df_history.empty:
-        st.line_chart(df_history.set_index('timestamp')[['prediction', 'temp']])
-    else:
+    required_cols = ['timestamp', 'prediction', 'temp']
+    if df_history.empty:
         st.info("The database is currently empty.")
+        return
+    if not all(col in df_history.columns for col in required_cols):
+        st.error("Missing required columns in history data.")
+        return
+    
+    # Clean data: drop rows with invalid timestamps and sort
+    df_history = df_history.dropna(subset=['timestamp']).copy()
+    df_history = df_history.sort_values('timestamp')
+    
+    # Plot prediction and temp; add humidity if available
+    cols_to_plot = ['prediction', 'temp']
+    if 'humidity' in df_history.columns:
+        cols_to_plot.append('humidity')
+    
+    st.line_chart(df_history.set_index('timestamp')[cols_to_plot])

@@ -10,7 +10,7 @@ us_holidays = holidays.US()
 
 def train_new_model():
     # 1. Load Data
-    df = pd.read_csv('data/PJME_hourly.csv', parse_dates=['Datetime'])
+    df = pd.read_csv('data/PJME_hourly.csv', parse_dates=['Datetime'], encoding='latin1')
 
     # 2. Feature Engineering
     df['hour'] = df['Datetime'].dt.hour

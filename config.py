@@ -23,7 +23,7 @@ class Config:
     WEATHER_API_URL = "http://api.openweathermap.org/data/2.5/weather"
     UNITS = "metric"
     WEEKEND_START_DAY = 5  # Saturday
-    DATA_BASE_PATH = "energy_demand_history.db"
+    DATA_BASE_PATH = "energy_data.db"
 
     CITIES = {
         "Philadelphia": "Philadelphia,US",
