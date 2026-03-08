@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 import holidays
 from database import save_prediction
-import config
+from config import config
 
 # 1. Load Model
 model = joblib.load(config.MODEL_PATH)

@@ -1,7 +1,7 @@
 import sqlite3
 import pandas as pd
 from typing import Optional
-import config 
+from config import config 
 
 def load_history() -> pd.DataFrame:
     """
