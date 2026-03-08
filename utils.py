@@ -61,7 +61,7 @@ def get_forecast_data(selected_city: str) -> Dict[str, Any]:
     df_weather['is_holiday'] = df_weather['datetime'].dt.date.apply(lambda x: 1 if x in us_holidays else 0)
     
     # Make predictions
-    features = df_weather[['hour', 'dayofweek', 'month', 'temp', 'humidity', 'is_weekend', 'is_holiday']].astype(float)
+    features = df_weather[['hour', 'dayofweek', 'month', 'temp', 'humidity', 'is_weekend', 'is_holiday']].apply(pd.to_numeric, errors='coerce').astype(float)
     df_weather['prediction_mw'] = predict_energy_demand(features)
 
     # Detect anomalies
