@@ -39,9 +39,21 @@ def display_history_chart(df_history: pd.DataFrame):
     df_history = df_history.dropna(subset=['timestamp']).copy()
     df_history = df_history.sort_values('timestamp')
     
+    # Ensure plotted columns are numeric
+    df_history['prediction'] = pd.to_numeric(df_history['prediction'], errors='coerce')
+    df_history['temp'] = pd.to_numeric(df_history['temp'], errors='coerce')
+    
     # Plot prediction and temp; add humidity if available
     cols_to_plot = ['prediction', 'temp']
     if 'humidity' in df_history.columns:
+        df_history['humidity'] = pd.to_numeric(df_history['humidity'], errors='coerce')
         cols_to_plot.append('humidity')
+    
+    # Drop rows with NaN in plotted columns
+    df_history = df_history.dropna(subset=cols_to_plot)
+    
+    if df_history.empty:
+        st.info("No valid data to display after cleaning.")
+        return
     
     st.line_chart(df_history.set_index('timestamp')[cols_to_plot])
