@@ -9,3 +9,4 @@ joblib
 holidays
 supabase
 torch
+sklearn
