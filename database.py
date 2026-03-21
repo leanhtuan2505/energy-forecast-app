@@ -48,3 +48,7 @@ def get_recent_sequence(limit=24):
     except Exception as e:
         print(f"Error fetching sequence: {e}")
         return []
+    
+def get_recent_actuals_and_preds():
+    # Placeholder to satisfy the import until we finish the SQL logic tomorrow
+    return [], []
