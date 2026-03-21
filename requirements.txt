@@ -1,12 +1,13 @@
+# Data Processing & ML
 pandas
 numpy
-scikit-learn
+scikit-learn  # Important: Use this instead of 'sklearn'
 xgboost
-streamlit>=1.22.0
-altair<5.0.0
-requests
 joblib
 holidays
+
+# Deep Learning (CPU version for faster pipeline runs)
+torch --index-url https://download.pytorch.org/whl/cpu
+
+# Database & Integration
 supabase
-torch
-sklearn

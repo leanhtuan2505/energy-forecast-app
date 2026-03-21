@@ -1,52 +1,41 @@
-name: Hourly Energy Prediction & LSTM Training
+name: Energy Demand Forecast Pipeline
 
 on:
   schedule:
-  - cron: '0 * * * *' # Runs at the start of every hour
+  - cron: '0 * * * *' # Runs every hour
   workflow_dispatch:
-
-
-permissions:
-  contents: write
+    # Allows manual trigger
 
 jobs:
-  inference_and_train:
+  run-pipeline:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4 # Updated to v4 for better performance
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-        cache: 'pip' # Speeds up subsequent runs by caching dependencies
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
 
-    - name: 1. Ingest Data & Predict
-      env:
-        OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      run: python fetch_data.py
+    - name: Run Data Ingestion # Adjust path if your script is inside the energy-forecast-app folder
+      run: python energy-forecast-app/fetch_data.py
 
-    - name: 2. Check Model Health & Retrain
+    - name: Check Model Health and Retrain
+      run: python energy-forecast-app/retrain_trigger.py
       env:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      run: python retrain_trigger.py
-      # This script should call train_lstm.py if accuracy drops
 
-    - name: 3. Archive Model Assets
-      if: success() # Only run if the previous steps passed
+    - name: Archive Model Assets
       uses: actions/upload-artifact@v4
       with:
-        name: energy-lstm-assets
+        name: model-assets
         path: |
           energy_lstm_model.pth
           scaler.pkl
-        retention-days: 7
