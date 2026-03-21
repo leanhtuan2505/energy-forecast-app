@@ -11,7 +11,7 @@ from model import EnergyLSTM  # Ensure model.py is in the same folder
 # 1. LOAD & PRE-PROCESS (Memory Optimized)
 print("Loading data...")
 # Only load the target column to save RAM
-df = pd.read_csv('data/PJME_hourly.csv', usecols=['PJME_MW'])
+df = pd.read_csv('PJME_hourly.csv', usecols=['PJME_MW'])
 data = df['PJME_MW'].values.astype(np.float32).reshape(-1, 1)
 
 # Normalization
