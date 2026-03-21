@@ -24,7 +24,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install pandas xgboost joblib requests holidays supabase scikit-learn
+        pip install pandas xgboost joblib requests holidays supabase scikit-learn sklearn
         pip install torch --index-url https://download.pytorch.org/whl/cpu 
         # Note: We use the CPU-only version of Torch to keep the runner light and fast
 
