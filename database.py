@@ -28,3 +28,23 @@ def load_history():
     # Fetch the last 100 rows from the cloud
     response = supabase.table("predictions").select("*").order("timestamp", desc=True).limit(100).execute()
     return pd.DataFrame(response.data)
+
+
+# ... (Keep your existing Supabase connection code)
+
+def get_recent_sequence(limit=24):
+    """Fetches the last N records to create a window for the LSTM."""
+    try:
+        response = supabase.table("predictions") \
+            .select("temp") \
+            .order("timestamp", desc=True) \
+            .limit(limit) \
+            .execute()
+        
+        # We need chronological order (Oldest -> Newest)
+        # So we reverse the list returned by Supabase
+        values = [row['temp'] for row in reversed(response.data)]
+        return values
+    except Exception as e:
+        print(f"Error fetching sequence: {e}")
+        return []

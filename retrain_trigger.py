@@ -1,28 +1,37 @@
-import sqlite3
 import pandas as pd
-import joblib
-from database import load_history
-from train_model import train_new_model
+from database import get_recent_actuals_and_preds # Hypothetical helper
+import subprocess # To run train_lstm.py
 
-THRESHOLD = 2.5  # If Avg Error is > 2.5°C, we retrain
+# 1. CONFIGURATION
+MAE_THRESHOLD = 500.0  # If error > 500 MW, we retrain
+WINDOW_SIZE = 24       # Check the last 24 hours of performance
 
 def check_model_health():
-    # Get the last 50 actual results vs predictions
-    df = load_history()
-
-    if len(df) < 20:
+    print("Evaluating model health...")
+    
+    # 2. FETCH RECENT DATA
+    # You need a function in database.py that joins 'actual' vs 'predicted'
+    df = get_recent_actuals_and_preds(limit=WINDOW_SIZE)
+    
+    if df.empty or len(df) < WINDOW_SIZE:
         print("Not enough data to evaluate health yet.")
-        return
+        return False
 
-    # Calculate Mean Absolute Error
-    mae = (df['temp'] - df['prediction']).abs().mean()
-    print(f"Current Model MAE: {mae:.2f}")
+    # 3. CALCULATE METRICS
+    df['error'] = abs(df['actual'] - df['predicted'])
+    current_mae = df['error'].mean()
+    
+    print(f"Current MAE: {current_mae:.2f} MW (Threshold: {MAE_THRESHOLD})")
 
-    if mae > THRESHOLD:
-        print("⚠️ Accuracy too low! Triggering Retraining...")
-        train_new_model() # This function runs your XGBoost fit() and saves the .pkl
+    # 4. THE DECISION
+    if current_mae > MAE_THRESHOLD:
+        print("🚨 Performance degraded. Triggering retraining...")
+        # Execute the training script as a subprocess
+        subprocess.run(["python", "train_lstm.py"], check=True)
+        return True
     else:
-        print("✅ Model health is stable. No retraining needed.")
+        print("✅ Model health is optimal. No retraining required.")
+        return False
 
 if __name__ == "__main__":
     check_model_health()

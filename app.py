@@ -1,98 +1,53 @@
 import streamlit as st
+import torch
+import numpy as np
 import pandas as pd
-from datetime import datetime
-import time
-from config import config
-from weather_api import get_live_weather
-from prediction import prepare_prediction_features, predict_energy_demand
-from utils import get_forecast_data, validate_city_input
-from ui_components import (
-    display_current_prediction, display_anomaly_alerts, 
-    display_forecast_chart, display_summary_table, display_history_chart
-)
-from database import load_history
-import logging
+from model import EnergyLSTM # Our new shared 'Skeleton'
+from database import get_recent_sequence # Our new 'Memory' fetcher
+import joblib
 
-logger = logging.getLogger(__name__)
+# 1. LOAD ASSETS
+# We still need the scaler from your training phase to normalize inputs
+scaler = joblib.load("scaler.pkl") 
 
-# Load model at startup
-from prediction import load_model
-model = load_model()
+# Initialize the LSTM 'Skeleton'
+model = EnergyLSTM(input_size=1, hidden_size=64, num_layers=2)
 
-st.title("⚡ Energy Demand Predictor")
+# Load the 'Muscles' (Weights)
+try:
+    model.load_state_dict(torch.load("energy_lstm_model.pth", map_location=torch.device('cpu')))
+    model.eval()
+    st.sidebar.success("🚀 LSTM Brain: Online")
+except FileNotFoundError:
+    st.sidebar.error("⚠️ Weights not found. Run train_lstm.py first.")
 
-# 1. LIVE PREDICTION SECTION
-if st.button("Get Forecast"):
-    with st.spinner("Fetching current weather..."):
-        try:
-            temp, humidity = get_live_weather()
-        
-            if temp is not None:
-                now = datetime.now()
-                features_df = prepare_prediction_features(now, temp, humidity)
-                prediction = predict_energy_demand(features_df)[0]
-                display_current_prediction(prediction)
-            else:
-                st.error("Failed to fetch current weather data.")
+# 2. THE PREDICTION LOGIC
+def predict_energy():
+    # A. Get the last 24 hours of data from Supabase
+    history = get_recent_sequence(limit=24)
+    
+    if len(history) < 24:
+        st.warning(f"Need 24 hours of data. Currently have: {len(history)}")
+        return None
 
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
-            logger.error(f"UI error: {e}")
+    # B. Pre-process (Scale and Reshape for PyTorch)
+    # Shape: [1, 24, 1] -> (Batch, Time-steps, Features)
+    seq = np.array(history).reshape(-1, 1)
+    scaled_seq = scaler.transform(seq)
+    input_tensor = torch.FloatTensor(scaled_seq).view(1, 24, 1)
 
-# 2. 5-DAY FORECAST SECTION
-selected_city = st.selectbox("Select a City:", list(config.CITIES.keys()))
+    # C. Inference
+    with torch.no_grad():
+        prediction_scaled = model(input_tensor)
+    
+    # D. Inverse Scale (Convert 0.1 back to 15,000 MW)
+    prediction = scaler.inverse_transform(prediction_scaled.numpy())
+    return prediction[0][0]
 
-if st.button("Generate 5-Day Forecast"):
-    if not validate_city_input(selected_city):
-        st.error("Invalid city selection")
-    else:
-        with st.spinner("Generating forecast..."):
-            forecast_data = get_forecast_data(selected_city)
-        
-        if "error" in forecast_data:
-            st.error(forecast_data["error"])
-        else:
-            # Display alerts
-            display_anomaly_alerts(forecast_data["anomalies_count"], forecast_data["max_peak"])
-            
-            # Display chart
-            display_forecast_chart(forecast_data["weather_df"])
-            
-            # Display summary table
-            display_summary_table(forecast_data["summary_df"])
+# 3. UI LAYOUT
+st.title("⚡ AI Energy Forecaster (V2: Deep Learning)")
 
-
-# --- LIVE MONITORING SECTION ---
-st.divider()
-st.header("📊 Real-Time Prediction History")
-
-# We wrap the table in a 'fragment' so it can refresh independently
-@st.fragment(run_every="60s")
-def show_live_table():
-    try:
-        # 1. Fetch data using your new Supabase function
-        df_history = load_history()
-        
-        if not df_history.empty:
-            # 2. Basic cleanup for the UI
-            df_display = df_history[['timestamp', 'temp', 'prediction', 'city']].copy()
-            df_display['timestamp'] = pd.to_datetime(df_display['timestamp']).dt.strftime('%H:%M:%S')
-            
-            # 3. Display the interactive table
-            st.dataframe(df_display, use_container_width=True, hide_index=True)
-            st.caption(f"Last updated: {time.strftime('%H:%M:%S')} (Auto-refreshes every 1m)")
-        else:
-            st.info("No data found in Supabase yet. Waiting for first GitHub Action run...")
-            
-    except Exception as e:
-        st.error(f"Database Connection Error: {e}")
-
-# Call the fragment
-show_live_table()
-
-st.divider()
-
-# 3. PERFORMANCE & HISTORY SECTION
-st.subheader("📊 Database History")
-df_history = load_history()
-display_history_chart(df_history)
+if st.button("Generate Forecast"):
+    result = predict_energy()
+    if result:
+        st.metric("Predicted Load", f"{result:,.2f} MW")

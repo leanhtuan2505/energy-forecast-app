@@ -1,38 +1,53 @@
-name: Hourly Energy Prediction
+name: Hourly Energy Prediction & LSTM Training
 
 on:
   schedule:
-    - cron: '0 * * * *' # Runs at the start of every hour
-  workflow_dispatch: # Allows you to run it manually for testing
+  - cron: '0 * * * *' # Runs at the start of every hour
+  workflow_dispatch:
+
 
 permissions:
-  contents: write  # This is the "Key" that lets the bot push the CSV
+  contents: write
 
 jobs:
-  build:
+  inference_and_train:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4 # Updated to v4 for better performance
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip' # Speeds up subsequent runs by caching dependencies
 
-      - name: Install dependencies
-        run: pip install pandas xgboost joblib requests holidays supabase scikit-learn
+    - name: Install dependencies
+      run: |
+        pip install pandas xgboost joblib requests holidays supabase scikit-learn
+        pip install torch --index-url https://download.pytorch.org/whl/cpu 
+        # Note: We use the CPU-only version of Torch to keep the runner light and fast
 
-      - name: Run prediction and save to Supabase
-        env:
-          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python fetch_data.py
+    - name: 1. Ingest Data & Predict
+      env:
+        OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: python fetch_data.py
 
-      - name: Check Model Health
-        env:
-          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python retrain_trigger.py
+    - name: 2. Check Model Health & Retrain
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: python retrain_trigger.py
+      # This script should call train_lstm.py if accuracy drops
+
+    - name: 3. Archive Model Assets
+      if: success() # Only run if the previous steps passed
+      uses: actions/upload-artifact@v4
+      with:
+        name: energy-lstm-assets
+        path: |
+          energy_lstm_model.pth
+          scaler.pkl
+        retention-days: 7
