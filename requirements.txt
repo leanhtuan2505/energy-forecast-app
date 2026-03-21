@@ -1,13 +1,8 @@
-# Data Processing & ML
 pandas
 numpy
-scikit-learn  # Important: Use this instead of 'sklearn'
+scikit-learn
 xgboost
 joblib
 holidays
-
-# Deep Learning (CPU version for faster pipeline runs)
-torch --index-url https://download.pytorch.org/whl/cpu
-
-# Database & Integration
 supabase
+torch --index-url https://download.pytorch.org/whl/cpu
