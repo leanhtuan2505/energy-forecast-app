@@ -49,6 +49,7 @@ def get_recent_sequence(limit=24):
         print(f"Error fetching sequence: {e}")
         return []
     
+
 def get_recent_actuals_and_preds(limit=None):
-    # Placeholder to satisfy the import until we finish the SQL logic tomorrow
-    return [], []
+    # Returning an actual empty DataFrame so .empty and len() work
+    return pd.DataFrame(), {}

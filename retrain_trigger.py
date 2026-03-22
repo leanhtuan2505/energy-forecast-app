@@ -11,7 +11,7 @@ def check_model_health():
     
     # 2. FETCH RECENT DATA
     # You need a function in database.py that joins 'actual' vs 'predicted'
-    df = get_recent_actuals_and_preds(limit=WINDOW_SIZE)
+    df, metadata = get_recent_actuals_and_preds(limit=WINDOW_SIZE)
     
     if df.empty or len(df) < WINDOW_SIZE:
         print("Not enough data to evaluate health yet.")
