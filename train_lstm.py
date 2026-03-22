@@ -55,8 +55,8 @@ def train_model():
             print(f"Epoch {epoch} | Loss: {loss.item():.6f}")
 
     # 5. Save the Artifact (Corrected Attribute Name)
-    torch.save(model.state_dict(), 'energy_lstm.pth')
-    print("Training complete. Artifact 'energy_lstm.pth' saved successfully.")
+    torch.save(model.state_dict(), 'energy_lstm_model.pth')
+    print("Training complete. Artifact 'energy_lstm_model.pth' saved successfully.")
 
 if __name__ == "__main__":
     train_model()

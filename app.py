@@ -14,7 +14,7 @@ def load_assets():
     """Load the model and scaler. Handles the case where they don't exist yet."""
     try:
         model = EnergyLSTM(input_size=1, hidden_layer_size=100, output_size=1)
-        model.load_state_dict(torch.load('energy_lstm.pth', map_location=torch.device('cpu')))
+        model.load_state_dict(torch.load('energy_lstm_model.pth', map_location=torch.device('cpu')))
         model.eval()
         scaler = joblib.load('scaler.pkl')
         return model, scaler
