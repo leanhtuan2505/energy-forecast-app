@@ -1,64 +1,62 @@
-import pandas as pd
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
+import pandas as pd
+import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import joblib
-from model import EnergyLSTM  # Ensure model.py is in the same folder
+from database import fetch_all_training_data # Your existing data helper
+from model import EnergyLSTM # Shared architecture
 
-# 1. LOAD & PRE-PROCESS (Memory Optimized)
-print("Loading data...")
-# Only load the target column to save RAM
-df = pd.read_csv('PJME_hourly.csv', usecols=['PJME_MW'])
-data = df['PJME_MW'].values.astype(np.float32).reshape(-1, 1)
-
-# Normalization
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled_data = scaler.fit_transform(data)
-joblib.dump(scaler, "scaler.pkl") # Save for Streamlit app use
-
-# 2. WINDOWING (Sliding Window)
-def create_sequences(data, window_size=24):
-    num_samples = len(data) - window_size
-    X = np.zeros((num_samples, window_size, 1), dtype=np.float32)
-    y = np.zeros((num_samples, 1), dtype=np.float32)
+def train_model():
+    print("--- Starting LSTM Training Sequence ---")
     
-    for i in range(num_samples):
-        X[i] = data[i:i + window_size]
-        y[i] = data[i + window_size]
-    return torch.from_numpy(X), torch.from_numpy(y)
+    # 1. Load and Preprocess Data
+    df = fetch_all_training_data()
+    if df.empty:
+        print("Error: No training data found.")
+        return
 
-X_train, y_train = create_sequences(scaled_data)
+    scaler = MinMaxScaler()
+    # Use float32 to save memory on GitHub Runners
+    scaled_data = scaler.fit_transform(df[['consumption']].values.astype('float32'))
+    
+    # Save scaler for inference parity (Critical for accuracy)
+    joblib.dump(scaler, 'scaler.pkl')
 
-# 3. BATCHING (The fix for your Memory Error)
-dataset = TensorDataset(X_train, y_train)
-loader = DataLoader(dataset, batch_size=64, shuffle=True)
+    # 2. Create Sequences (Windowing)
+    def create_sequences(data, seq_length=24):
+        xs, ys = [], []
+        for i in range(len(data) - seq_length):
+            x = data[i:(i + seq_length)]
+            y = data[i + seq_length]
+            xs.append(x)
+            ys.append(y)
+        return np.array(xs), np.array(ys)
 
-# 4. MODEL INITIALIZATION
-model = EnergyLSTM(input_size=1, hidden_size=64, num_layers=2)
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+    X, y = create_sequences(scaled_data)
+    X_train = torch.from_numpy(X)
+    y_train = torch.from_numpy(y)
 
-# 5. TRAINING LOOP
-print(f"Starting Training on {len(X_train)} samples...")
-epochs = 20 # Start with 20 to test stability
-model.train()
+    # 3. Model Initialization
+    model = EnergyLSTM(input_size=1, hidden_layer_size=100, output_size=1)
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-for epoch in range(epochs):
-    running_loss = 0.0
-    for batch_X, batch_y in loader:
+    # 4. Training Loop (Optimized for GH Actions CPU)
+    epochs = 10 
+    model.train()
+    for epoch in range(epochs):
         optimizer.zero_grad()
-        outputs = model(batch_X)
-        loss = criterion(outputs, batch_y)
+        y_pred = model(X_train)
+        loss = criterion(y_pred, y_train)
         loss.backward()
         optimizer.step()
-        running_loss += loss.item()
-    
-    avg_loss = running_loss / len(loader)
-    print(f"Epoch [{epoch+1}/{epochs}] - Loss: {avg_loss:.6f}")
+        if epoch % 2 == 0:
+            print(f"Epoch {epoch} | Loss: {loss.item():.6f}")
 
-# 6. EXPORT
-torch.save(model.state_dict(), "energy_lstm_model.pth")
-print("✅ Training complete. Assets 'energy_lstm_model.pth' and 'scaler.pkl' are ready.")
+    # 5. Save the Artifact (Corrected Attribute Name)
+    torch.save(model.state_dict(), 'energy_lstm.pth')
+    print("Training complete. Artifact 'energy_lstm.pth' saved successfully.")
+
+if __name__ == "__main__":
+    train_model()

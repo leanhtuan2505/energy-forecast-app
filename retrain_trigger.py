@@ -1,37 +1,40 @@
-import pandas as pd
-from database import get_recent_actuals_and_preds # Hypothetical helper
-import subprocess # To run train_lstm.py
+import os
+import subprocess
+from database import get_recent_actuals_and_preds # Resolved Import
+from sklearn.metrics import mean_absolute_error
 
-# 1. CONFIGURATION
-MAE_THRESHOLD = 500.0  # If error > 500 MW, we retrain
-WINDOW_SIZE = 24       # Check the last 24 hours of performance
+# ARCHITECTURAL CONSTANT: The threshold for 'Acceptable Error'
+# If MAE (Mean Absolute Error) > 5.0 kWh, we trigger a retrain.
+ERROR_THRESHOLD = 5.0 
 
-def check_model_health():
-    print("Evaluating model health...")
+def evaluate_and_trigger():
+    print("--- Starting Self-Healing Diagnostic ---")
     
-    # 2. FETCH RECENT DATA
-    # You need a function in database.py that joins 'actual' vs 'predicted'
-    df, metadata = get_recent_actuals_and_preds(limit=WINDOW_SIZE)
+    # 1. Fetch data from Supabase (the function we just added)
+    actuals, preds = get_recent_actuals_and_preds(limit=24)
     
-    if df.empty or len(df) < WINDOW_SIZE:
-        print("Not enough data to evaluate health yet.")
-        return False
+    if not actuals or not preds or len(actuals) < 10:
+        print("Insufficient data for evaluation. Skipping retrain.")
+        return
 
-    # 3. CALCULATE METRICS
-    df['error'] = abs(df['actual'] - df['predicted'])
-    current_mae = df['error'].mean()
-    
-    print(f"Current MAE: {current_mae:.2f} MW (Threshold: {MAE_THRESHOLD})")
+    # 2. Calculate Performance Metric
+    mae = mean_absolute_error(actuals, preds)
+    print(f"Current Model MAE: {mae:.2f}")
 
-    # 4. THE DECISION
-    if current_mae > MAE_THRESHOLD:
-        print("🚨 Performance degraded. Triggering retraining...")
-        # Execute the training script as a subprocess
-        subprocess.run(["python", "train_lstm.py"], check=True)
-        return True
+    # 3. Decision Logic
+    if mae > ERROR_THRESHOLD:
+        print(f"ALERT: Error {mae:.2f} exceeds threshold {ERROR_THRESHOLD}.")
+        print("Initiating LSTM Retraining Sequence...")
+        
+        try:
+            # Trigger the training script as a subprocess
+            result = subprocess.run(["python", "train_lstm.py"], check=True, capture_output=True, text=True)
+            print("Retraining Successful:")
+            print(result.stdout)
+        except subprocess.CalledProcessError as e:
+            print(f"CRITICAL ERROR during retraining: {e.stderr}")
     else:
-        print("✅ Model health is optimal. No retraining required.")
-        return False
+        print("Model performance is within acceptable parameters. No action required.")
 
 if __name__ == "__main__":
-    check_model_health()
+    evaluate_and_trigger()

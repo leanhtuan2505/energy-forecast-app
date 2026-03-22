@@ -50,6 +50,24 @@ def get_recent_sequence(limit=24):
         return []
     
 
-def get_recent_actuals_and_preds(limit=None):
-    # Returning an actual empty DataFrame so .empty and len() work
-    return pd.DataFrame(), {}
+def get_recent_actuals_and_preds(limit=24):
+    """
+    Fetches the most recent actual consumption and predicted values 
+    from Supabase to calculate the current error rate (MAE/MSE).
+    """
+    try:
+        # Query your 'energy_predictions' table
+        response = supabase.table("energy_predictions") \
+            .select("actual_value, predicted_value") \
+            .order("created_at", desc=True) \
+            .limit(limit) \
+            .execute()
+        
+        data = response.data
+        actuals = [row['actual_value'] for row in data if row['actual_value'] is not None]
+        preds = [row['predicted_value'] for row in data if row['actual_value'] is not None]
+        
+        return actuals, preds
+    except Exception as e:
+        print(f"Database Fetch Error: {e}")
+        return [], []
